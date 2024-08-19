@@ -1,8 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { BrowserRouter as Router, MemoryRouter, useNavigate } from 'react-router-dom';
+
 import AuthPage from '../AuthPage';
 
+import { useStore } from '../../store/contexts/StoreContext'
+import * as apiService from '../../services/apiService'
 jest.mock('react-router-dom', () => {
     // Import the actual module to use the real implementations
     const actualModule = jest.requireActual('react-router-dom');
@@ -12,6 +15,13 @@ jest.mock('react-router-dom', () => {
       useNavigate: jest.fn(),
     };
   });
+
+jest.mock('../../store/contexts/StoreContext')
+
+jest.mock('../../services/apiService', () => ({
+  ...jest.requireActual('../../services/apiService'),
+  login: jest.fn(),
+}));
 
 const PW_ERROR = 'The password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one digit, and one special character.';
 
@@ -23,6 +33,9 @@ describe('AuthPage', () => {
         </MemoryRouter>
         );
     };
+    const mockLoginSuccess = jest.fn();
+    const mockSetLoading = jest.fn();
+    const mockLoginFailure = jest.fn();
 
     beforeEach(()=>{
         jest.resetAllMocks();
@@ -30,6 +43,17 @@ describe('AuthPage', () => {
     
         // Mock console.log with a spy
         console.log = jest.fn();
+
+        //mock useStore
+        useStore.mockReturnValue({
+          state: { auth: { isAuthenticated: false, loading: false, error: null } },
+          dispatch: jest.fn(),
+          authActions: {
+            setLoading: mockSetLoading,
+            loginSuccess: mockLoginSuccess,
+            loginFailure: mockLoginFailure,
+          },
+        });
     })
 
     afterEach(() =>{
@@ -59,14 +83,43 @@ describe('AuthPage', () => {
         });
     });
 
+    it('calls handleLoginSubmit with correct data - login failes ', async () => {
+      const mockLogin = apiService.login.mockRejectedValue(new Error('401'));
+      render(
+        <Router>
+            <AuthPage />
+        </Router>
+      );
+        
+        const usernameInput = screen.getByTestId('login-username-input-test-id');
+        const passwordInput = screen.getByTestId('login-password-input-test-id');
+
+        fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+        fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
+        fireEvent.click(screen.getByRole('button', { name: /login/i }));
+  
+        await waitFor(() => {
+            expect(mockLogin).toHaveBeenCalledWith('testuser', 'Password123!' );
+        });
+        expect(mockLoginFailure).toHaveBeenCalledWith('Login failed: Error: 401.');
+
+    });
+
     it('calls handleLoginSubmit with correct data when login form is submitted', async () => {
-        const mockHandleLoginSubmit = jest.fn();
+      const mockLoginData = {
+        username: 'testuser',
+        email: 'test@example.com',
+        role: 'user',
+        access_token: 'sampleAccessToken',
+        token_type: 'bearer'
+      };
+      const mockLogin = apiService.login.mockResolvedValue(mockLoginData);
         render(
         <Router>
             <AuthPage />
         </Router>
         );
-
+        
         const usernameInput = screen.getByTestId('login-username-input-test-id');
         const passwordInput = screen.getByTestId('login-password-input-test-id');
 
@@ -74,9 +127,18 @@ describe('AuthPage', () => {
         fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
         fireEvent.click(screen.getByRole('button', { name: /login/i }));
 
+
+        const user = {
+            username: mockLoginData.username,
+            email: mockLoginData.email,
+            role: mockLoginData.role
+        };
+  
         await waitFor(() => {
-            expect(console.log).toHaveBeenCalledWith('Login successful');
+            expect(mockLogin).toHaveBeenCalledWith('testuser', 'Password123!' );
         });
+        expect(mockLoginSuccess).toHaveBeenCalledWith(user, mockLoginData.access_token, mockLoginData.token_type);
+
     });
 
     it('calls handleSignUpSubmit with correct data when sign up form is submitted', async () => {

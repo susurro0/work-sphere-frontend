@@ -3,6 +3,9 @@ import { AppBar, Toolbar, Typography, Button } from '@mui/material';
 import Sidebar from './sidebar/Sidebar'; // Adjust the import path if needed
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
+import { logout } from '../store/actions/authActions';
+import useToken from '../hooks/useToken';
+import TokenChecker from '../auth/TokenChecker';
 
 const MainContent = styled('main')(({ theme }) => ({
   marginLeft: 240, // Width of the sidebar
@@ -15,39 +18,57 @@ const MainContent = styled('main')(({ theme }) => ({
 }));
 
 const BaseLayout = ({ children, showSidebar = true }) => {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
+    const { token, removeToken } = useToken(); // Get token and removeToken function
 
-  const handleLoginClick = () => {
-    navigate('/auth?tab=login');
-  };
+    const handleLoginClick = () => {
+      navigate('/auth?tab=login');
+    };
 
-  const handleSignupClick = () => {
-    navigate('/auth?tab=signup');
-  };
+    const handleSignupClick = () => {
+      navigate('/auth?tab=signup');
+    };
 
-  return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-      <AppBar position="fixed" style={{ width: '100%', zIndex: 1200 }}>
-        <Toolbar>
-          <Typography variant="h6" style={{ flexGrow: 1 }}>
-            My App
-          </Typography>
-          <Button color="inherit" onClick={handleLoginClick}>
-            Login
-          </Button>
-          <Button color="inherit" onClick={handleSignupClick}>
-            Sign Up
-          </Button>
-        </Toolbar>
-      </AppBar>
+    const handleLogoutClick = () => {
+      removeToken();
+      logout(); 
+      navigate('/auth?tab=login'); 
+    };
+    return (
+      <div style={{ display: 'flex', height: '100vh' }}>
+        <TokenChecker>
 
-      {showSidebar && <Sidebar />}
+          <AppBar position="fixed" style={{ width: '100%', zIndex: 1200 }}>
+            <Toolbar>
+              <Typography variant="h6" style={{ flexGrow: 1 }}>
+                My App
+              </Typography>
+              {token ? (
+              <Button color="inherit" onClick={handleLogoutClick}>
+                Logout
+              </Button>
+            ) : (
+              <>
+                <Button color="inherit" onClick={handleLoginClick}>
+                  Login
+                </Button>
+                <Button color="inherit" onClick={handleSignupClick}>
+                  Sign Up
+                </Button>
+              </>
+            )}
+            </Toolbar>
+          </AppBar>
 
-      <MainContent>
-        {children}
-      </MainContent>
-    </div>
-  );
+          {showSidebar && <Sidebar />}
+
+          <MainContent>
+            {children}
+          </MainContent>
+        </TokenChecker>
+
+      </div>
+    );
 };
 
 export default BaseLayout;

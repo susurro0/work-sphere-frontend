@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Tabs, Tab, Container, Paper, Box } from '@mui/material';
+import { Typography, Tabs, Tab, Container, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoginForm from '../components/forms/LoginForm';
 import SignUpForm from '../components/forms/SignUpForm';
+import { useStore } from '../store/contexts/StoreContext';
+import { login } from '../services/apiService';
+import useToken from '../hooks/useToken';
 
 const CenteredContainer = styled(Container)(({ theme }) => ({
   display: 'flex',
@@ -29,11 +32,16 @@ const PaperStyled = styled(Paper)(({ theme }) => ({
 }));
 
 function AuthPage() {
+
+  const { state, dispatch, authActions} = useStore()
+
   const [tab, setTab] = useState('login');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { storeToken } = useToken();
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -75,61 +83,62 @@ function AuthPage() {
     }
 
     return newErrors;
-};
+  };
 
-const validateSignup = (username, email, password, confirmPassword) => {
-  const newErrors = {};
+  const validateSignup = (username, email, password, confirmPassword) => {
+    const newErrors = {};
 
-  // Validate username
-  if (!/^\w+$/.test(username)) {
-    newErrors.username = 'Username must be a single word without spaces, whitespace, or special characters.';
-  } else if (username.length < 5) {
-    newErrors.username = 'Username must be at least 5 characters long.';
-  }
+    // Validate username
+    if (!/^\w+$/.test(username)) {
+      newErrors.username = 'Username must be a single word without spaces, whitespace, or special characters.';
+    } else if (username.length < 5) {
+      newErrors.username = 'Username must be at least 5 characters long.';
+    }
 
-  // Validate email
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    newErrors.email = 'A valid email is required.';
-  }
+    // Validate email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'A valid email is required.';
+    }
 
-  // Validate password
-  if (!password) {
-    newErrors.password = 'Password is required.';
-  } else {
-    const passwordErrors = [];
-    if (password.length < 8) {
-      passwordErrors.push('Password must be at least 8 characters long.');
+    // Validate password
+    if (!password) {
+      newErrors.password = 'Password is required.';
+    } else {
+      const passwordErrors = [];
+      if (password.length < 8) {
+        passwordErrors.push('Password must be at least 8 characters long.');
+      }
+      if (!/[A-Z]/.test(password)) {
+        passwordErrors.push('Password must contain at least one uppercase letter.');
+      }
+      if (!/[a-z]/.test(password)) {
+        passwordErrors.push('Password must contain at least one lowercase letter.');
+      }
+      if (!/[0-9]/.test(password)) {
+        passwordErrors.push('Password must contain at least one digit.');
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        passwordErrors.push('Password must contain at least one special character.');
+      }
+      if (passwordErrors.length > 0) {
+        newErrors.password = passwordErrors.join(' ');
+      }
     }
-    if (!/[A-Z]/.test(password)) {
-      passwordErrors.push('Password must contain at least one uppercase letter.');
-    }
-    if (!/[a-z]/.test(password)) {
-      passwordErrors.push('Password must contain at least one lowercase letter.');
-    }
-    if (!/[0-9]/.test(password)) {
-      passwordErrors.push('Password must contain at least one digit.');
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      passwordErrors.push('Password must contain at least one special character.');
-    }
-    if (passwordErrors.length > 0) {
-      newErrors.password = passwordErrors.join(' ');
-    }
-  }
 
-  // Validate confirm password
-  if (confirmPassword === '') {
-    newErrors.confirmPassword = 'Confirm password is required.';
-  } else if (password !== confirmPassword) {
-    newErrors.confirmPassword = 'Passwords do not match.';
-  }
+    // Validate confirm password
+    if (confirmPassword === '') {
+      newErrors.confirmPassword = 'Confirm password is required.';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match.';
+    }
 
-  return newErrors;
-};
+    return newErrors;
+  };
 
 
 
   const handleLoginSubmit = async (username, password) => {
+    dispatch(authActions.setLoading()); 
     const validationErrors = validateLogin(username, password);
     if (Object.keys(validationErrors).length) {
       setErrors({ ...errors, ...validationErrors });
@@ -138,13 +147,23 @@ const validateSignup = (username, email, password, confirmPassword) => {
 
     setLoading(true);
     setErrors({});
-
+    
     try {
-      // Uncomment and adjust the API call as needed
-      // const response = await postData('/login', { username, password });
-      console.log('Login successful');
+      const response = await login(username, password);
+      console.log(response)
+      const { username: uname, email, role, access_token: token, token_type: tokenType } = response;
+      const user = {
+        username: uname,
+        email: email,
+        role: role
+      }
+      storeToken(token)
+      dispatch(authActions.loginSuccess(user, token, tokenType)); 
+      console.log('Login successful!');
       navigate('/');
     } catch (error) {
+      dispatch(authActions.loginFailure(`Login failed: ${error}.`)); 
+
       setErrors({ general: 'Login failed. Please try again.' });
     } finally {
       setLoading(false);
