@@ -1,40 +1,66 @@
-import axios from 'axios';
-
 // Base URL for the API
 const BASE_URL = 'http://127.0.0.1:8000'; // TODO change for higher envs
 
-// Create an axios instance with default configurations
-const apiClient = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    // You can set other default headers here
-  },
-});
-
-// API service functions
-
-// Example function to fetch data from an endpoint
-export const fetchData = async (endpoint) => {
+// Helper function to make fetch requests
+const makeRequest = async (url, options) => {
   try {
-    const response = await apiClient.get(endpoint);
-    return response.data;
+    const response = await fetch(url, options);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('API call error:', error);
     throw error;
   }
+};
+
+// Example function to fetch data from an endpoint
+export const fetchData = async (endpoint) => {
+  const url = `${BASE_URL}${endpoint}`;
+  const options = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+  
+  return makeRequest(url, options);
 };
 
 // Example function to post data to an endpoint
 export const postData = async (endpoint, data) => {
-  try {
-    const response = await apiClient.post(endpoint, data);
-    return response.data;
-  } catch (error) {
-    console.error('API call error:', error);
-    throw error;
-  }
+  const url = `${BASE_URL}${endpoint}`;
+  const options = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  };
+  
+  return makeRequest(url, options);
 };
 
-// Add more API functions as needed
+// Function to log in
+export const login = async (username, password) => {
+  const data = new URLSearchParams({
+    username,
+    password,
+    grant_type: 'password',
+  }).toString();
 
+  const url = `${BASE_URL}/login`;
+  const options = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: data,
+  };
+
+  return makeRequest(url, options);
+};
