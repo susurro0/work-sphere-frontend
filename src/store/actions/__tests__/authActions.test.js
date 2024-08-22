@@ -1,4 +1,4 @@
-import { loginSuccess, loginFailure, logout, setLoading } from '../authActions'; 
+import { loginSuccess, logout, setLoading, setError } from '../authActions'; 
 
 describe('Auth Actions', () => {
   test('loginSuccess returns the correct action object', () => {
@@ -14,15 +14,15 @@ describe('Auth Actions', () => {
     expect(loginSuccess(user, token, tokenType)).toEqual(expectedAction);
   });
 
-  test('loginFailure returns the correct action object', () => {
+  test('setError returns the correct action object', () => {
     const error = 'Invalid credentials';
 
     const expectedAction = {
-      type: 'LOGIN_FAILURE',
+      type: 'SET_ERROR',
       payload: { error },
     };
 
-    expect(loginFailure(error)).toEqual(expectedAction);
+    expect(setError(error)).toEqual(expectedAction);
   });
 
   test('logout returns the correct action object', () => {

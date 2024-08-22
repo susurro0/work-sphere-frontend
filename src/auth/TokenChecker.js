@@ -5,16 +5,16 @@ import useToken from '../hooks/useToken'; // Import the useToken hook
 import { logout } from '../store/actions/authActions';
 
 const TokenChecker = ({ children }) => {
-  const { token, isTokenExpired, removeToken } = useToken();
+  const { isTokenExpired, removeToken } = useToken();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isTokenExpired(token)) {
+    if (isTokenExpired(localStorage.getItem('jwtToken'))) {
       removeToken();
       logout();
       navigate('/auth?tab=login'); 
     }
-  }, [token, isTokenExpired, removeToken, navigate]);
+  }, [localStorage.getItem('jwtToken'), isTokenExpired, removeToken, navigate]);
 
   return <>{children}</>;
 };

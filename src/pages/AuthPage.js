@@ -5,8 +5,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import LoginForm from '../components/forms/LoginForm';
 import SignUpForm from '../components/forms/SignUpForm';
 import { useStore } from '../store/contexts/StoreContext';
-import { login } from '../services/apiService';
+import { login, postData } from '../services/apiService';
 import useToken from '../hooks/useToken';
+import { validateLogin, validateSignup } from '../utils/authValidation'; // Import validation functions
 
 const CenteredContainer = styled(Container)(({ theme }) => ({
   display: 'flex',
@@ -21,7 +22,6 @@ const CenteredContainer = styled(Container)(({ theme }) => ({
   overflow: 'hidden',
 }));
 
-const PW_ERROR = 'The password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one digit, and one special character.';
 const PaperStyled = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   width: '100%',
@@ -33,15 +33,13 @@ const PaperStyled = styled(Paper)(({ theme }) => ({
 
 function AuthPage() {
 
-  const { state, dispatch, authActions} = useStore()
-
+  const { state, dispatch, authActions } = useStore();
   const [tab, setTab] = useState('login');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
-
-  const { storeToken } = useToken();
+  const { storeToken, isTokenExpired } = useToken();
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -51,94 +49,14 @@ function AuthPage() {
     }
   }, [location.search]);
 
-  const validateLogin = (username, password) => {
-    const newErrors = {};
-
-    // Validate username
-    if (!/^\w+$/.test(username)) {
-        newErrors.username = 'Username must be a single word without spaces, whitespace, or special characters.';
-    } else if (username.length < 5) {
-        newErrors.username = 'Username must be at least 5 characters long.';
+  useEffect(() => {
+    if (localStorage.getItem('jwtToken') && !isTokenExpired(localStorage.getItem('jwtToken'))) {
+      navigate('/');
     }
-
-    // Validate password
-    if (!password) {
-        newErrors.password = 'Password is required.';
-    } else {
-        if (password.length < 8) {
-            newErrors.password = PW_ERROR;
-        }
-        if (!/[A-Z]/.test(password)) {
-            newErrors.password = PW_ERROR;
-        }
-        if (!/[a-z]/.test(password)) {
-            newErrors.password = PW_ERROR;
-        }
-        if (!/[0-9]/.test(password)) {
-            newErrors.password = PW_ERROR;
-        }
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-            newErrors.password = PW_ERROR;
-        }
-    }
-
-    return newErrors;
-  };
-
-  const validateSignup = (username, email, password, confirmPassword) => {
-    const newErrors = {};
-
-    // Validate username
-    if (!/^\w+$/.test(username)) {
-      newErrors.username = 'Username must be a single word without spaces, whitespace, or special characters.';
-    } else if (username.length < 5) {
-      newErrors.username = 'Username must be at least 5 characters long.';
-    }
-
-    // Validate email
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'A valid email is required.';
-    }
-
-    // Validate password
-    if (!password) {
-      newErrors.password = 'Password is required.';
-    } else {
-      const passwordErrors = [];
-      if (password.length < 8) {
-        passwordErrors.push('Password must be at least 8 characters long.');
-      }
-      if (!/[A-Z]/.test(password)) {
-        passwordErrors.push('Password must contain at least one uppercase letter.');
-      }
-      if (!/[a-z]/.test(password)) {
-        passwordErrors.push('Password must contain at least one lowercase letter.');
-      }
-      if (!/[0-9]/.test(password)) {
-        passwordErrors.push('Password must contain at least one digit.');
-      }
-      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-        passwordErrors.push('Password must contain at least one special character.');
-      }
-      if (passwordErrors.length > 0) {
-        newErrors.password = passwordErrors.join(' ');
-      }
-    }
-
-    // Validate confirm password
-    if (confirmPassword === '') {
-      newErrors.confirmPassword = 'Confirm password is required.';
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match.';
-    }
-
-    return newErrors;
-  };
-
-
+  }, [localStorage.getItem('jwtToken'), navigate]);
 
   const handleLoginSubmit = async (username, password) => {
-    dispatch(authActions.setLoading()); 
+    dispatch(authActions.setLoading());
     const validationErrors = validateLogin(username, password);
     if (Object.keys(validationErrors).length) {
       setErrors({ ...errors, ...validationErrors });
@@ -147,23 +65,21 @@ function AuthPage() {
 
     setLoading(true);
     setErrors({});
-    
+
     try {
       const response = await login(username, password);
-      console.log(response)
+      console.log(response);
       const { username: uname, email, role, access_token: token, token_type: tokenType } = response;
       const user = {
         username: uname,
         email: email,
         role: role
-      }
-      storeToken(token)
-      dispatch(authActions.loginSuccess(user, token, tokenType)); 
-      console.log('Login successful!');
+      };
+      storeToken(token);
+      dispatch(authActions.loginSuccess(user, token, tokenType));
       navigate('/');
     } catch (error) {
-      dispatch(authActions.loginFailure(`Login failed: ${error}.`)); 
-
+      dispatch(authActions.setError(`Login failed: ${error}.`));
       setErrors({ general: 'Login failed. Please try again.' });
     } finally {
       setLoading(false);
@@ -182,10 +98,10 @@ function AuthPage() {
 
     try {
       // Uncomment and adjust the API call as needed
-      // const response = await postData('/signup', { username, email, password });
-      console.log('Sign-up successful');
-      navigate('/');
+      const response = await postData('/register', { username, email, password });
+      navigate('/auth?tab=login');
     } catch (error) {
+      dispatch(authActions.setError(`Sign-up failed. ${error}.`));
       setErrors({ general: 'Sign-up failed. Please try again.' });
     } finally {
       setLoading(false);

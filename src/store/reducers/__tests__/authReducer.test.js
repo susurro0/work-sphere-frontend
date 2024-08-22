@@ -26,7 +26,7 @@ describe('authReducer', () => {
 
   test('should handle LOGIN_FAILURE', () => {
     const action = {
-      type: 'LOGIN_FAILURE',
+      type: 'SET_ERROR',
       payload: {
         error: 'Invalid credentials',
       },
