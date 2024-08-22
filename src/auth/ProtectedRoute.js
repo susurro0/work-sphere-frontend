@@ -6,9 +6,8 @@ import useToken from '../hooks/useToken';
 
 const ProtectedRoute = ({ element, ...rest }) => {
   const { getToken } = useToken()
-  const {token} = getToken();  
 
-  if (!token) {
+  if (!getToken()) {
     return <Navigate to="/auth" />;
   }
 
