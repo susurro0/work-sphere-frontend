@@ -23,7 +23,7 @@ export const initialAuthState = {
           loading: false,
           error: null,
         };
-      case 'LOGIN_FAILURE':
+      case 'SET_ERROR':
         return {
           ...state,
           isAuthenticated: false,

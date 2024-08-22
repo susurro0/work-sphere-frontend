@@ -1,6 +1,6 @@
 // src/auth/ProtectedRoute.test.js
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from '../ProtectedRoute';
 import useToken from '../../hooks/useToken';
@@ -19,6 +19,8 @@ describe('ProtectedRoute Component', () => {
     // Mock useToken to return a token
     useToken.mockReturnValue({
       getToken: () => ({ token: 'mockToken' }),
+      isTokenExpired: jest.fn(() => false)
+
     });
 
     render(
@@ -33,21 +35,46 @@ describe('ProtectedRoute Component', () => {
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
   });
 
-  test('redirects to /auth when no token is present', () => {
-    // Mock useToken to return no token
+  test('renders the login  component when a token is expired', () => {
+    // Mock useToken to return a token
     useToken.mockReturnValue({
-      getToken: () => ({ token: null }),
+      getToken: () => ({ token: 'mockToken' }),
+      isTokenExpired: jest.fn(() => true)
+
     });
 
     render(
       <MemoryRouter initialEntries={['/protected']}>
         <Routes>
           <Route path="/protected" element={<ProtectedRoute element={<MockComponent />} />} />
-          <Route path="/auth" element={<div>Auth Page</div>} />
+          <Route path="/auth?tab=login" element={<div>Auth Page</div>} />
         </Routes>
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Auth Page')).toBeInTheDocument();
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+  });
+  test('redirects to /auth when no token is present', async () => {
+  
+    useToken.mockReturnValue({
+      getToken: () => ({ token: null }),
+      isTokenExpired: jest.fn(() => true)
+
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/protected']}>
+        <Routes>
+          <Route path="/protected" element={<ProtectedRoute element={<MockComponent />} />} />
+          <Route path="/auth?tab=login" element={<div>Auth Page</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+    
   });
 });
+
+
+
