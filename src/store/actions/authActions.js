@@ -5,8 +5,8 @@ export const loginSuccess = (user, token, tokenType) => ({
     payload: { user, token, tokenType },
   });
   
-  export const loginFailure = (error) => ({
-    type: 'LOGIN_FAILURE',
+  export const setError = (error) => ({
+    type: 'SET_ERROR',
     payload: { error },
   });
   

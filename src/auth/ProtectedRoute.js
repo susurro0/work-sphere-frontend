@@ -5,11 +5,10 @@ import { Navigate } from 'react-router-dom';
 import useToken from '../hooks/useToken';
 
 const ProtectedRoute = ({ element, ...rest }) => {
-  const { getToken } = useToken()
-  const {token} = getToken();  
+  const { getToken, isTokenExpired } = useToken()
 
-  if (!token) {
-    return <Navigate to="/auth" />;
+  if (!getToken() || isTokenExpired(getToken())) {
+    return <Navigate to="/auth?tab=login" />;
   }
 
   return element;

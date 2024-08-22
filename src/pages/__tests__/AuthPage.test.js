@@ -6,6 +6,8 @@ import AuthPage from '../AuthPage';
 
 import { useStore } from '../../store/contexts/StoreContext'
 import * as apiService from '../../services/apiService'
+import useToken from '../../hooks/useToken';
+
 jest.mock('react-router-dom', () => {
     // Import the actual module to use the real implementations
     const actualModule = jest.requireActual('react-router-dom');
@@ -21,8 +23,22 @@ jest.mock('../../store/contexts/StoreContext')
 jest.mock('../../services/apiService', () => ({
   ...jest.requireActual('../../services/apiService'),
   login: jest.fn(),
+  postData: jest.fn()
 }));
 
+jest.mock('../../hooks/useAuth', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    login: jest.fn(),
+    postData: jest.fn(),
+    // other methods if needed
+  })),
+}));
+
+jest.mock('../../hooks/useToken', () => ({
+  __esModule: true,
+  default: jest.fn()
+}));
 const PW_ERROR = 'The password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one digit, and one special character.';
 
 describe('AuthPage', () => {
@@ -35,7 +51,12 @@ describe('AuthPage', () => {
     };
     const mockLoginSuccess = jest.fn();
     const mockSetLoading = jest.fn();
-    const mockLoginFailure = jest.fn();
+    const mockSetError = jest.fn();
+
+    // Mock localStorage
+    const mockGetItem = jest.fn();
+    const mockSetItem = jest.fn();
+    const mockRemoveItem = jest.fn();
 
     beforeEach(()=>{
         jest.resetAllMocks();
@@ -44,6 +65,11 @@ describe('AuthPage', () => {
         // Mock console.log with a spy
         console.log = jest.fn();
 
+        useToken.mockImplementation(() => ({
+          storeToken: jest.fn(),
+          isTokenExpired: jest.fn(() => false)
+        }));
+
         //mock useStore
         useStore.mockReturnValue({
           state: { auth: { isAuthenticated: false, loading: false, error: null } },
@@ -51,9 +77,14 @@ describe('AuthPage', () => {
           authActions: {
             setLoading: mockSetLoading,
             loginSuccess: mockLoginSuccess,
-            loginFailure: mockLoginFailure,
+            setError: mockSetError,
           },
         });
+        global.localStorage = {
+          getItem: mockGetItem,
+          setItem: mockSetItem,
+          removeItem: mockRemoveItem,
+        };
     })
 
     afterEach(() =>{
@@ -101,7 +132,7 @@ describe('AuthPage', () => {
         await waitFor(() => {
             expect(mockLogin).toHaveBeenCalledWith('testuser', 'Password123!' );
         });
-        expect(mockLoginFailure).toHaveBeenCalledWith('Login failed: Error: 401.');
+        expect(mockSetError).toHaveBeenCalledWith('Login failed: Error: 401.');
 
     });
 
@@ -141,8 +172,17 @@ describe('AuthPage', () => {
 
     });
 
-    it('calls handleSignUpSubmit with correct data when sign up form is submitted', async () => {
-        const mockHandleSignUpSubmit = jest.fn();
+    it('calls handleSignUpSubmit with correct data when sign up form is submitted', async () => {        
+        const mockRegisterData = {
+          username: 'testuser',
+          email: 'test@example.com',
+          role: 'user',
+        };
+        const mockPostData = apiService.postData.mockResolvedValue(mockRegisterData);
+
+        const mockNavigate = jest.fn();
+        
+        useNavigate.mockReturnValue(mockNavigate);
         renderComponent(['/auth?tab=signup']);
 
         const usernameInput = screen.getByTestId('username-input-test-id');
@@ -157,11 +197,37 @@ describe('AuthPage', () => {
         fireEvent.change(confirmInput, { target: { value: 'Password123!' } });
         fireEvent.click(screen.getByTestId('signup-button-test-id'));
     
-
         await waitFor(() => {
-            expect(console.log).toHaveBeenCalledWith('Sign-up successful');
+            expect(mockNavigate).toHaveBeenCalledWith('/auth?tab=login');
         });
     });
+
+    it('calls handleSignUpSubmit with correct data - sign up failure ', async () => {
+      
+      const mockPostData = apiService.postData.mockRejectedValue(new Error('400'));
+      const mockNavigate = jest.fn();
+      
+      useNavigate.mockReturnValue(mockNavigate);
+      renderComponent(['/auth?tab=signup']);
+
+      const usernameInput = screen.getByTestId('username-input-test-id');
+      const emailInput = screen.getByTestId('email-input-test-id');
+
+      const passwordInput = screen.getByTestId('password-test-id');
+      const confirmInput = screen.getByTestId('confirm-password-test-id');
+      
+      fireEvent.change(usernameInput, { target: { value: 'newuser' } });
+      fireEvent.change(emailInput, { target: { value: 'newuser@example.com' } });
+      fireEvent.change(passwordInput, { target: { value: 'Password123!' } });
+      fireEvent.change(confirmInput, { target: { value: 'Password123!' } });
+      fireEvent.click(screen.getByTestId('signup-button-test-id'));
+  
+      await waitFor(() => {
+        expect(mockPostData).toHaveBeenCalled();
+      });
+      expect(mockSetError).toHaveBeenCalledWith('Sign-up failed. Error: 400.');
+
+  });
 
     const loginScenariosValidation = [
         {
@@ -237,6 +303,10 @@ describe('AuthPage', () => {
     it.each(loginScenariosValidation)(
         'displays errors when validation fails for username: "$username" and password: "$password"',
         async ({ username, password, expectedErrors }) => {
+          useToken.mockImplementation(() => ({
+            storeToken: jest.fn(),
+            isTokenExpired: jest.fn(() => false)
+          }));
           renderComponent();
     
           fireEvent.change(screen.getByLabelText(/username/i), { target: { value: username } });
@@ -305,6 +375,7 @@ describe('AuthPage', () => {
     it.each(signUpScenariosValidation)(
         'displays errors when validation fails for username: "$username", email: "$email", password: "$password", confirmPassword: "$confirmPassword"',
         async ({ username, email, password, confirmPassword, expectedErrors }) => {
+            
             renderComponent(['/auth?tab=signup']);
         
             fireEvent.change(screen.getByLabelText(/username/i), { target: { value: username } });
@@ -323,6 +394,7 @@ describe('AuthPage', () => {
 
     it('updates the URL when tab is changed', async () => {
         const mockNavigate = jest.fn();
+        
         useNavigate.mockReturnValue(mockNavigate);
         render(
             <MemoryRouter> {/* Wrap the component in MemoryRouter */}
@@ -336,5 +408,24 @@ describe('AuthPage', () => {
         await waitFor(() => {
             expect(mockNavigate).toHaveBeenCalledWith('/auth?tab=signup');
         });
+  });
+
+  it('navigates to home if token is present and not expired', async () => {
+    const mockNavigate = jest.fn();
+
+    global.localStorage.setItem('jwtToken', 'token')
+    useNavigate.mockReturnValue(mockNavigate);
+
+    render(
+      <Router>
+        <AuthPage />
+      </Router>
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+    global.localStorage.setItem('jwtToken', null)
+
   });
 });
