@@ -1,4 +1,3 @@
-import nock from 'nock';
 import { fetchData, postData, login } from '../apiService'; // Adjust the import path
 
 describe('API Service Tests', () => {

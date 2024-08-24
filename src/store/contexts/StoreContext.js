@@ -1,6 +1,7 @@
 import React, { createContext, useReducer, useContext } from 'react';
 import { rootReducer, initialState } from '../reducers/rootReducer';
 import * as authActions from '../actions/authActions'
+import * as pathfinderActions from '../actions/pathfinderActions'
 
 // Create the context
 const StoreContext = createContext();
@@ -15,6 +16,7 @@ export const StoreProvider = ({ children }) => {
         state,
         dispatch,
         authActions: authActions,
+        pathfinderActions: pathfinderActions
       }}
     >
       {children}

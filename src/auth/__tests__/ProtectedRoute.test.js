@@ -47,7 +47,7 @@ describe('ProtectedRoute Component', () => {
       <MemoryRouter initialEntries={['/protected']}>
         <Routes>
           <Route path="/protected" element={<ProtectedRoute element={<MockComponent />} />} />
-          <Route path="/auth?tab=login" element={<div>Auth Page</div>} />
+          <Route path="/auth" element={<div>Auth Page</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -66,7 +66,7 @@ describe('ProtectedRoute Component', () => {
       <MemoryRouter initialEntries={['/protected']}>
         <Routes>
           <Route path="/protected" element={<ProtectedRoute element={<MockComponent />} />} />
-          <Route path="/auth?tab=login" element={<div>Auth Page</div>} />
+          <Route path="/auth" element={<div>Auth Page</div>} />
         </Routes>
       </MemoryRouter>
     );

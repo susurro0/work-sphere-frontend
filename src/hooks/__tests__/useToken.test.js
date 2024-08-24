@@ -12,8 +12,6 @@ describe('useToken Hook', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    tokenHook = renderHook(() => useToken()).result.current;
-
   });
 
   test('should store and retrieve a token', () => {
@@ -57,6 +55,8 @@ describe('useToken Hook', () => {
   });
 
   it('should return false for a valid token that is not expired', () => {
+    tokenHook = renderHook(() => useToken()).result.current;
+
     const validToken = {
       exp: Math.floor(Date.now() / 1000) + 60 // Expires in 60 seconds
     };

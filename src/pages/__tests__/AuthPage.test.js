@@ -90,7 +90,7 @@ describe('AuthPage', () => {
     afterEach(() =>{
         console.log = originalConsoleLog;
 
-        cleanup
+        cleanup()
     })
 
     it('renders login form by default', () => {

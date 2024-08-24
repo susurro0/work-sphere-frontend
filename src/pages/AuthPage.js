@@ -7,7 +7,7 @@ import SignUpForm from '../components/forms/SignUpForm';
 import { useStore } from '../store/contexts/StoreContext';
 import { login, postData } from '../services/apiService';
 import useToken from '../hooks/useToken';
-import { validateLogin, validateSignup } from '../utils/authValidation'; // Import validation functions
+import { validateLogin, validateSignup } from '../utils/validation'; // Import validation functions
 
 const CenteredContainer = styled(Container)(({ theme }) => ({
   display: 'flex',
@@ -68,7 +68,6 @@ function AuthPage() {
 
     try {
       const response = await login(username, password);
-      console.log(response);
       const { username: uname, email, role, access_token: token, token_type: tokenType } = response;
       const user = {
         username: uname,

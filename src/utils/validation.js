@@ -33,9 +33,9 @@ export const validateLogin = (username, password) => {
     }
   
     return newErrors;
-  };
+};
   
-  export const validateSignup = (username, email, password, confirmPassword) => {
+export const validateSignup = (username, email, password, confirmPassword) => {
     const newErrors = {};
   
     // Validate username
@@ -83,5 +83,26 @@ export const validateLogin = (username, password) => {
     }
   
     return newErrors;
-  };
-  
+};
+
+export const validateGrid = (grid) =>{
+  let hasStart = false;
+  let hasEnd = false;
+
+  for (let row of grid) {
+      for (let cell of row) {
+          if (cell === 1) {
+              hasStart = true;
+          }
+          if (cell === 2) {
+              hasEnd = true;
+          }
+
+          if (hasStart && hasEnd) {
+              return [true, true];
+          }
+      }
+  }
+  return [hasStart, hasEnd];
+
+}

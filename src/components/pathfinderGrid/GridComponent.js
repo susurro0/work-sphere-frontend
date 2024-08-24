@@ -1,36 +1,63 @@
-// GridComponent.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Paper } from '@mui/material';
 
-const GridComponent = ({ grid, onCellClick, gridSize }) => {
-  // Define a fixed size for cells to maintain square shape
+const GridComponent = ({ grid, onCellClick, gridSize, path }) => {
   const CELL_SIZE = 40;
+  const [currentGrid, setCurrentGrid] = useState(grid); // State to manage the grid
+  const [animatedPath, setAnimatedPath] = useState([]);
+
+  useEffect(() => {
+    setCurrentGrid(grid); 
+    if(path.length == 0){
+      setAnimatedPath(path)
+    }
+  }, [grid, path]);
+
+  useEffect(() => {
+    if (path.length > 0) {
+      animatePath(path);
+    }
+  }, [path]);
+
+  const animatePath = (path) => {
+    path.forEach((cell, index) => {
+      setTimeout(() => {
+        setAnimatedPath((prevPath) => [...prevPath, cell]);
+      }, index * 300); // Adjust the delay time for the speed of animation
+    });
+  };
 
   return (
     <Paper
       style={{
-        height: `${10 * CELL_SIZE}px`,
-        width: `${10 * CELL_SIZE}px`,
+        height: `${gridSize * CELL_SIZE}px`,
+        width: `${gridSize * CELL_SIZE}px`,
         display: 'grid',
         gridTemplateColumns: `repeat(${gridSize}, ${CELL_SIZE}px)`,
         gridGap: '1px',
         position: 'relative'
       }}
     >
-      {grid.map((row, rowIndex) =>
-        row.map((cell, colIndex) => (
-          <div
-            key={`${rowIndex}-${colIndex}`}
-            style={{
-              width: `${CELL_SIZE}px`,
-              height: `${CELL_SIZE}px`,
-              backgroundColor: cell === 'wall' ? 'black' : cell === 'start' ? 'green' : cell === 'end' ? 'red' : 'white',
-              border: '1px solid gray',
-              cursor: 'pointer'
-            }}
-            onClick={() => onCellClick(rowIndex, colIndex)}
-          />
-        ))
+      {currentGrid.map((row, rowIndex) =>
+        row.map((cell, colIndex) => {
+          const isInPath = animatedPath.some(
+            ([pathRow, pathCol]) => pathRow === rowIndex && pathCol === colIndex
+          );
+          return (
+            <div
+                data-testid={`cell-${rowIndex}-${colIndex}`}
+                key={`${rowIndex}-${colIndex}`}
+                style={{
+                width: `${CELL_SIZE}px`,
+                height: `${CELL_SIZE}px`,
+                backgroundColor: isInPath ? 'yellow' : cell === -1 ? 'black' : cell === 1 ? 'green' : cell === 2 ? 'red' : 'white',
+                border: '1px solid gray',
+                cursor: 'pointer'
+              }}
+              onClick={() => onCellClick(rowIndex, colIndex)}
+            />
+          );
+        })
       )}
     </Paper>
   );
